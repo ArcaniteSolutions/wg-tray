@@ -20,7 +20,7 @@ setup(
     long_description_content_type="text/markdown",
     author="Elsa Weber",
     author_email="elsa.weber@arcanite.ch",
-    url="https://git.arcanite.ch/arcanite/wg-tray/",
+    url="https://wg-tray.arcanite.ch/",
     license="LICENSE.txt",
     packages=find_packages(),
     install_requires=[
