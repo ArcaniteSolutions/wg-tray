@@ -1,4 +1,6 @@
+from configparser import ConfigParser
 import argparse
+import logging
 import os
 import pathlib
 import signal
@@ -6,7 +8,7 @@ import sys
 
 
 from PyQt5.QtCore import pyqtSlot, QCoreApplication, QTimer
-from PyQt5.QtGui import QContextMenuEvent, QIcon, QMovie
+from PyQt5.QtGui import QIcon, QMovie
 from PyQt5.QtWidgets import QAction, QApplication, QMenu, QSystemTrayIcon
 
 
@@ -18,10 +20,10 @@ RES_PATH = pathlib.Path(__file__).parent.resolve() / "res"
 
 
 class WGTrayIcon(QSystemTrayIcon):
-    def __init__(self, config_path=None):
+    def __init__(self, config_path=None, config_menu=None):
         super().__init__()
 
-        self.menu = WGMenu(self, config_path)
+        self.menu = WGMenu(self, config_path, config_menu)
         self.setContextMenu(self.menu)
         self.activated.connect(self.activateMenu)  # show also on left click
 
@@ -36,10 +38,37 @@ class WGTrayIcon(QSystemTrayIcon):
 
 
 class WGMenu(QMenu):
-    def __init__(self, tray, config_path):
+    def __init__(self, tray, config_path, config_menu=None):
         super().__init__()
 
         self.tray = tray
+        self.config_menu = config_menu
+
+        itfs_up = self.read_status()
+
+        interfaces_done = []
+        self.menus = []
+        if self.config_menu:
+            for section in self.config_menu.sections():
+                menu = self.addMenu(str(section))
+                self.menus.append(menu)
+
+                if not menu:
+                    continue
+
+                section_interfaces = []
+                for interface in self.config_menu[section]["interfaces"].strip().split():
+                    action = WGInterface(interface, self, interface in itfs_up)
+                    action.updateIcon()
+                    menu.addAction(action)
+
+                    section_interfaces.append(interface)
+
+                interfaces_done.extend(section_interfaces)
+
+                menu.addSeparator()
+                menu.addAction(WGInterfaceAll("Up all interfaces", self, section_interfaces, True, refresh=self.startRefresh))
+                menu.addAction(WGInterfaceAll("Down all interfaces", self, section_interfaces, False, refresh=self.startRefresh))
 
         if config_path:
             with open(config_path) as f:
@@ -49,17 +78,18 @@ class WGMenu(QMenu):
 
         itfs = itfs.strip().split()
 
-        itfs_up = self.read_status()
-
         for itf_name in itfs:
-            action = WGInterface(itf_name, self, itf_name in itfs_up)
-            action.updateIcon()
-            self.addAction(action)
+            if itf_name not in interfaces_done:
+                action = WGInterface(itf_name, self, itf_name in itfs_up)
+                action.updateIcon()
+                self.addAction(action)
+
+                interfaces_done.append(itf_name)
 
         self.addSeparator()
 
-        self.addAction(WGInterfaceAll("Up all interface", self, itfs, True, refresh=self.startRefresh))
-        self.addAction(WGInterfaceAll("Down all interface", self, itfs, False, refresh=self.startRefresh))
+        self.addAction(WGInterfaceAll("Up all interfaces", self, interfaces_done, True, refresh=self.startRefresh))
+        self.addAction(WGInterfaceAll("Down all interfaces", self, interfaces_done, False, refresh=self.startRefresh))
 
         self.addSeparator()
 
@@ -91,6 +121,12 @@ class WGMenu(QMenu):
             if isinstance(action, WGInterface):
                 action.setUp(action.text() in itfs_up)
                 action.updateIcon()
+
+        for menu in self.menus:
+            for action in menu.actions():
+                if isinstance(action, WGInterface):
+                    action.setUp(action.text() in itfs_up)
+                    action.updateIcon()
 
     def showTearOff(self):
         self.showTearOffMenu(QApplication.desktop().availableGeometry().center())
@@ -165,11 +201,15 @@ def parse_args():
     return args.config
 
 
+logging.basicConfig(level=logging.INFO)
+config = ConfigParser()
+config.read(pathlib.Path("~/.wireguard/wg_configs.ini").expanduser())
+
 app = QApplication(sys.argv)
 
 config_path = parse_args()
 
-WGTrayIcon(config_path)
+WGTrayIcon(config_path, config_menu=config)
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 

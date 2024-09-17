@@ -1,9 +1,7 @@
 import pathlib
 import subprocess
 import threading
-
-from concurrent.futures import ThreadPoolExecutor, as_completed
-
+import logging
 
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QIcon, QMovie
@@ -11,6 +9,8 @@ from PyQt5.QtWidgets import QAction, QSystemTrayIcon
 
 
 RES_PATH = pathlib.Path(__file__).parent.parent.resolve() / "res"
+
+logger = logging.getLogger(__name__)
 
 
 class WGInterface(QAction):
@@ -69,7 +69,7 @@ class WGInterface(QAction):
 
 
 class WGInterfaceAll(QAction):
-    done = pyqtSignal(name="done")  # necessary to put outside of __init__
+    done = pyqtSignal(int, name="done")  # necessary to put outside of __init__
 
     def __init__(self, name, parent, interfaces, type_, refresh=None):
         super().__init__(name, parent)
@@ -82,8 +82,6 @@ class WGInterfaceAll(QAction):
 
         self.triggered.connect(self.toggle)
         self.done.connect(self._done)
-        self._thread = threading.Thread(target=self._toggle)
-
         self.updateIcon()
 
     def updateIcon(self):
@@ -93,8 +91,16 @@ class WGInterfaceAll(QAction):
             icon_path = f"{RES_PATH}/grey_arrow_down.png"
         self.setIcon(QIcon(icon_path))
 
-    @pyqtSlot()
-    def _done(self):
+    @pyqtSlot(int)
+    def _done(self, count):
+
+        pt = 'upped' if self.type_ else 'downed'
+        if count:
+            self.parent.tray.showMessage("Informations", f"Successfully {pt} {count} interface(s)", QSystemTrayIcon.NoIcon)
+
+        else:
+            self.parent.tray.showMessage("Warning", f"No interfaces where {pt}", QSystemTrayIcon.NoIcon)
+
         self.loadingSpinner.stop()
         self.updateIcon()
 
@@ -108,7 +114,8 @@ class WGInterfaceAll(QAction):
         self.loadingSpinner.start()
 
         # Launch command
-        self._thread.start()
+        t = threading.Thread(target=self._toggle)
+        t.start()
 
     def _toggle(self):
         kw = "up" if self.type_ else "down"
@@ -117,24 +124,20 @@ class WGInterfaceAll(QAction):
             subp = subprocess.Popen(f"sudo wg-quick {kw} {interface}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
 
             _, std_err = subp.communicate()  # blocking
-            stat, err_msg = self.type_, ""
             if subp.returncode == 0:
-                stat = not self.type_  # toggle was successful
+                return True, ""
+
+            return False, std_err.decode()
+
+        upped_interface = 0
+        for interface in self.interfaces:
+            success, err_msg = _interface_open(interface)
+
+            if success:
+                logger.info(f"Interface: {interface}, sucessfully mounted")
+                upped_interface += 1
+
             else:
-                err_msg = std_err.decode()
+                logger.info(f"Interface: {interface}, error while mounting: {err_msg}")
 
-            return stat, err_msg
-
-        results = []
-        with ThreadPoolExecutor(max_workers=10) as executor:
-            futures = [
-                executor.submit(_interface_open, interface)
-                for interface in self.interfaces
-            ]
-
-            for future in as_completed(futures):
-                result = future.result()
-                print(result)
-                results.append(result)
-
-        self.done.emit()
+        self.done.emit(upped_interface)
