@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QAction, QApplication, QMenu, QSystemTrayIcon
 
 
 from . import __description__, __version__
-from .actions.interface import WGInterface
+from .actions.interface import WGInterface, WGInterfaceAll
 
 
 RES_PATH = pathlib.Path(__file__).parent.resolve() / "res"
@@ -46,12 +46,20 @@ class WGMenu(QMenu):
                 itfs = f.read()
         else:
             itfs = os.popen("sudo ls /etc/wireguard | grep .conf | awk -F \".\" '{print $1}'").read()
+
+        itfs = itfs.strip().split()
+
         itfs_up = self.read_status()
 
-        for itf_name in itfs.strip().split():
+        for itf_name in itfs:
             action = WGInterface(itf_name, self, itf_name in itfs_up)
             action.updateIcon()
             self.addAction(action)
+
+        self.addSeparator()
+
+        self.addAction(WGInterfaceAll("Up all interface", self, itfs, True, refresh=self.startRefresh))
+        self.addAction(WGInterfaceAll("Down all interface", self, itfs, False, refresh=self.startRefresh))
 
         self.addSeparator()
 
