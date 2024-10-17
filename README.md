@@ -3,8 +3,9 @@
 wg-tray enables to quickly bring up/down wireguard interfaces from the system tray, using `wg` and `wg-quick`.
 
 ## Installation
+wg-tray is a small python package. To install it globally, the recommended version is using [pipx](https://pipx.pypa.io/stable/installation/) (using just pip will result in the error "externally-managed-environment").
 
-`$ pip install wg-tray`
+`$ pipx install wg-tray`
 
 ## Usage
 ```bash
