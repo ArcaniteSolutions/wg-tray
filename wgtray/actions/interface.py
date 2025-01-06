@@ -1,7 +1,10 @@
+from itertools import chain
+import logging
 import pathlib
+import random
 import subprocess
 import threading
-import logging
+
 
 from PyQt5.QtCore import pyqtSignal, pyqtSlot
 from PyQt5.QtGui import QIcon, QMovie
@@ -71,7 +74,7 @@ class WGInterface(QAction):
 class WGInterfaceAll(QAction):
     done = pyqtSignal(int, name="done")  # necessary to put outside of __init__
 
-    def __init__(self, name, parent, interfaces, type_, refresh=None):
+    def __init__(self, name, parent, interfaces, type_, subgroups=None, pick_one_at_random=False, refresh=None):
         super().__init__(name, parent)
 
         self.name = name
@@ -79,6 +82,9 @@ class WGInterfaceAll(QAction):
         self.interfaces = interfaces
         self.type_ = type_
         self.refresh = refresh
+
+        self.subgroups = subgroups if subgroups else []
+        self.pick_one_at_random = pick_one_at_random
 
         self.triggered.connect(self.toggle)
         self.done.connect(self._done)
@@ -94,7 +100,7 @@ class WGInterfaceAll(QAction):
     @pyqtSlot(int)
     def _done(self, count):
 
-        pt = 'upped' if self.type_ else 'downed'
+        pt = "upped" if self.type_ else "downed"
         if count:
             self.parent.tray.showMessage("Informations", f"Successfully {pt} {count} interface(s)", QSystemTrayIcon.NoIcon)
 
@@ -117,6 +123,17 @@ class WGInterfaceAll(QAction):
         t = threading.Thread(target=self._toggle)
         t.start()
 
+    def get_iterfaces_to_workon(self):
+        """Return the list of interfaces to down/up."""
+
+        if self.subgroups:
+            return chain.from_iterable(group.get_iterfaces_to_workon() for group in self.subgroups)
+
+        if self.pick_one_at_random:
+            return random.choices(self.interfaces, k=1)
+
+        return self.interfaces
+
     def _toggle(self):
         kw = "up" if self.type_ else "down"
 
@@ -130,7 +147,8 @@ class WGInterfaceAll(QAction):
             return False, std_err.decode()
 
         upped_interface = 0
-        for interface in self.interfaces:
+
+        for interface in self.get_iterfaces_to_workon():
             success, err_msg = _interface_open(interface)
 
             if success:

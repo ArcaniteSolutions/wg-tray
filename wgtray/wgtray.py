@@ -47,9 +47,25 @@ class WGMenu(QMenu):
         itfs_up = self.read_status()
 
         interfaces_done = []
+        interface_actions = []
         self.menus = []
+
         if self.config_menu:
+            general_pick_one_at_random = False
+            if "settings" in config:
+                settings = self.config_menu["settings"]
+                general_pick_one_at_random = settings.get("pick_one_at_random", "false") == "true"
+
             for section in self.config_menu.sections():
+                if section == "settings":
+                    continue
+
+                if "pick_one_at_random" in self.config_menu[section]:
+                    pick_one_at_random = self.config_menu[section].get("pick_one_at_random", "false") == "true"
+
+                else:
+                    pick_one_at_random = general_pick_one_at_random
+
                 menu = self.addMenu(str(section))
                 self.menus.append(menu)
 
@@ -67,8 +83,28 @@ class WGMenu(QMenu):
                 interfaces_done.extend(section_interfaces)
 
                 menu.addSeparator()
-                menu.addAction(WGInterfaceAll("Up all interfaces", self, section_interfaces, True, refresh=self.startRefresh))
-                menu.addAction(WGInterfaceAll("Down all interfaces", self, section_interfaces, False, refresh=self.startRefresh))
+                interface_action = WGInterfaceAll(
+                    "Up one random interface" if pick_one_at_random else "Up all interfaces",
+                    self,
+                    section_interfaces,
+                    True,
+                    pick_one_at_random=pick_one_at_random,
+                    refresh=self.startRefresh,
+                )
+                menu.addAction(interface_action)
+                interface_actions.append(interface_action)
+
+                menu.addAction(
+                    WGInterfaceAll(
+                        "Down all interfaces",
+                        self,
+                        section_interfaces,
+                        False,
+                        # We want to down all interfaces, regarding of the settings for the up
+                        pick_one_at_random=False,
+                        refresh=self.startRefresh,
+                    )
+                )
 
         if config_path:
             with open(config_path) as f:
@@ -88,8 +124,37 @@ class WGMenu(QMenu):
 
         self.addSeparator()
 
-        self.addAction(WGInterfaceAll("Up all interfaces", self, interfaces_done, True, refresh=self.startRefresh))
-        self.addAction(WGInterfaceAll("Down all interfaces", self, interfaces_done, False, refresh=self.startRefresh))
+        self.addAction(
+            WGInterfaceAll(
+                "Up interfaces on all groups",
+                self,
+                [],
+                True,
+                subgroups=interface_actions,
+                pick_one_at_random=False,
+                refresh=self.startRefresh,
+            )
+        )
+        self.addAction(
+            WGInterfaceAll(
+                "Up all interfaces",
+                self,
+                interfaces_done,
+                True,
+                pick_one_at_random=False,
+                refresh=self.startRefresh,
+            )
+        )
+        self.addAction(
+            WGInterfaceAll(
+                "Down interfaces on all groups",
+                self,
+                interfaces_done,
+                False,
+                pick_one_at_random=False,
+                refresh=self.startRefresh,
+            )
+        )
 
         self.addSeparator()
 
@@ -186,7 +251,10 @@ class WGMenu(QMenu):
 
 def parse_args():
 
-    parser = argparse.ArgumentParser(description=__description__)
+    parser = argparse.ArgumentParser(
+        description=__description__,
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
     parser.add_argument("-v", "--version", help="show program version info and exit", action="version", version=__version__)
     parser.add_argument(
         "-c",
@@ -195,21 +263,29 @@ def parse_args():
         default=None,
         type=str,
     )
+    parser.add_argument(
+        "-g",
+        "--config-groups",
+        help="Path to the config (.ini file) to have groups of wireguard configs.",
+        default="~/.wireguard/wg_tray_groups.ini",
+        type=str,
+    )
 
     args = parser.parse_args()
 
-    return args.config
+    return args
 
 
 logging.basicConfig(level=logging.INFO)
 config = ConfigParser()
-config.read(pathlib.Path("~/.wireguard/wg_configs.ini").expanduser())
 
 app = QApplication(sys.argv)
 
-config_path = parse_args()
+parser_args = parse_args()
+config.read(pathlib.Path(parser_args.config_groups).expanduser())
 
-WGTrayIcon(config_path, config_menu=config)
+WGTrayIcon(parser_args.config, config_menu=config)
+
 
 signal.signal(signal.SIGINT, signal.SIG_DFL)
 
