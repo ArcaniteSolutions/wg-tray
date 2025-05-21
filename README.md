@@ -39,7 +39,7 @@ If you want to avoid being prompted for your root password each time you run `wg
 ```
 
 ### Config groups
-You can define configs groups in the config groups files (located `./wireguard/wg_tray_groups.ini` by default).
+You can group configs by defining them in the config groups file (located at `./wireguard/wg_tray_groups.ini` by default).
 
 #### Example
 Here's an example of a `wg_tray_groups.ini` config file:
@@ -61,5 +61,5 @@ interfaces = inter05
 ```
 
 #### Configs groups settings: `pick_one_at_random`
-If you whish to only up one random interfaces from the group, you can define the settings `pick_one_at_random` in your section.
-You can also use it on all groups be defining a `settings` section.
+By default all interfaces in a group will be brought up with a shortcut button. If you wish to only bring up one random interface from the group, you can define the setting `pick_one_at_random` in your group section.
+You can also use it on all groups by defining a `settings` section.
