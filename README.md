@@ -51,13 +51,13 @@ pick_one_at_random = false
 [Group 01]
 pick_one_at_random = true
 interfaces = inter01
-           = inter02
-           = inter03
-           = inter04
+             inter02
+             inter03
+             inter04
 
 [Group 02]
 interfaces = inter05
-           = inter06
+             inter06
 ```
 
 #### Configs groups settings: `pick_one_at_random`
