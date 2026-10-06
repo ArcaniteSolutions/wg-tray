@@ -29,7 +29,7 @@ options:
 ```
 The config file should simply list all wireguard interfaces, separated either by newlines or spaces (e.g. `wg0 wg1` or
 ```
-wg0 
+wg0
 wg1
 ```
 ). The purpose of this config file is to avoid using root access on `ls` to read in `/etc`; however, its correctness is not checked and it is your responsability to keep it up to date.
@@ -66,3 +66,13 @@ interfaces = inter05
 #### Configs groups settings: `pick_one_at_random`
 By default all interfaces in a group will be brought up with a shortcut button. If you wish to only bring up one random interface from the group, you can define the setting `pick_one_at_random` in your group section.
 You can also use it on all groups by defining a `settings` section.
+
+## Development
+Uses [uv](https://docs.astral.sh/uv/) + [ruff](https://docs.astral.sh/ruff/).
+
+```sh
+$ uv sync                     # venv + dev dependencies
+$ uv run pre-commit install   # ruff check + format on commit
+$ uv run wg-tray              # run from source
+$ uv build                    # sdist + wheel -> dist/
+```

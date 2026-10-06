@@ -1,14 +1,13 @@
+from PyQt5.QtCore import pyqtSignal, pyqtSlot
+from PyQt5.QtGui import QIcon, QMovie
+from PyQt5.QtWidgets import QAction, QSystemTrayIcon
 from itertools import chain
+
 import logging
 import pathlib
 import random
 import subprocess
 import threading
-
-
-from PyQt5.QtCore import pyqtSignal, pyqtSlot
-from PyQt5.QtGui import QIcon, QMovie
-from PyQt5.QtWidgets import QAction, QSystemTrayIcon
 
 
 RES_PATH = pathlib.Path(__file__).parent.parent.resolve() / "res"
@@ -44,10 +43,7 @@ class WGInterface(QAction):
         self.is_up = up
 
     def updateIcon(self):
-        if self.is_up:
-            icon_path = f"{RES_PATH}/green_arrow_up.png"
-        else:
-            icon_path = f"{RES_PATH}/grey_arrow_down.png"
+        icon_path = f"{RES_PATH}/green_arrow_up.png" if self.is_up else f"{RES_PATH}/grey_arrow_down.png"
         self.setIcon(QIcon(icon_path))
 
     def toggle(self):
@@ -94,7 +90,7 @@ class WGInterfaceAll(QAction):
         self.type_ = type_
         self.refresh = refresh
 
-        self.subgroups = subgroups if subgroups else []
+        self.subgroups = subgroups or []
         self.pick_one_at_random = pick_one_at_random
 
         self.triggered.connect(self.toggle)
@@ -102,10 +98,7 @@ class WGInterfaceAll(QAction):
         self.updateIcon()
 
     def updateIcon(self):
-        if self.type_:
-            icon_path = f"{RES_PATH}/green_arrow_up.png"
-        else:
-            icon_path = f"{RES_PATH}/grey_arrow_down.png"
+        icon_path = f"{RES_PATH}/green_arrow_up.png" if self.type_ else f"{RES_PATH}/grey_arrow_down.png"
         self.setIcon(QIcon(icon_path))
 
     @pyqtSlot(int)
@@ -136,7 +129,6 @@ class WGInterfaceAll(QAction):
 
     def get_iterfaces_to_workon(self):
         """Return the list of interfaces to down/up."""
-
         if self.subgroups:
             return chain.from_iterable(group.get_iterfaces_to_workon() for group in self.subgroups)
 

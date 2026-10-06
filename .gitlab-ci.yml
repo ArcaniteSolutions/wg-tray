@@ -1,25 +1,24 @@
-image: python:3.7-buster
+image: ghcr.io/astral-sh/uv:python3.13-trixie
 
 cache:
   key: ${CI_PROJECT_NAME}
   paths:
-    - .cache/pip
-    - venv
+    - .cache/uv
+
+variables:
+  UV_CACHE_DIR: "$CI_PROJECT_DIR/.cache/uv"
 
 stages:
   - test
 
 before_script:
-  - apt update
-  - apt install -y python3-dev
-  - pip install -U pip
-  - pip install virtualenv
-  - virtualenv venv
-  - source venv/bin/activate
-  - pip install -U black isort
+  - uv sync --only-group dev
+  - uv cache prune --ci
+  # Already synced, no need to do it again on each `uv run` :)
+  - export UV_NO_SYNC=1
 
 test:formatting:
   stage: test
   script:
-    - black --check .
-    - isort --check-only --diff .
+    - uv run ruff format --check .
+    - uv run ruff check .

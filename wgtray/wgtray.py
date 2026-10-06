@@ -1,4 +1,11 @@
+from . import __description__, __version__
+from .actions.interface import WGInterface, WGInterfaceAll, wg_quick
+
+from PyQt5.QtCore import QCoreApplication, QTimer, pyqtSlot
+from PyQt5.QtGui import QIcon, QMovie
+from PyQt5.QtWidgets import QAction, QApplication, QMenu, QSystemTrayIcon
 from configparser import ConfigParser
+
 import argparse
 import logging
 import os
@@ -6,15 +13,6 @@ import pathlib
 import random
 import signal
 import sys
-
-
-from PyQt5.QtCore import pyqtSlot, QCoreApplication, QTimer
-from PyQt5.QtGui import QIcon, QMovie
-from PyQt5.QtWidgets import QAction, QApplication, QMenu, QSystemTrayIcon
-
-
-from . import __description__, __version__
-from .actions.interface import wg_quick, WGInterface, WGInterfaceAll
 
 
 RES_PATH = pathlib.Path(__file__).parent.resolve() / "res"
@@ -44,10 +42,9 @@ def up_all_groups(config_menu):
     failed = 0
 
     for section, interfaces, pick_one_at_random in read_groups(config_menu):
-        if pick_one_at_random:
-            interfaces = random.choices(interfaces, k=1)
+        to_up = random.choices(interfaces, k=1) if pick_one_at_random else interfaces
 
-        for interface in interfaces:
+        for interface in to_up:
             success, err_msg = wg_quick("up", interface)
 
             if success:
