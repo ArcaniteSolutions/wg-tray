@@ -16,6 +16,17 @@ RES_PATH = pathlib.Path(__file__).parent.parent.resolve() / "res"
 logger = logging.getLogger(__name__)
 
 
+def wg_quick(kw, interface):
+    """`sudo wg-quick <kw> <interface>` => (success, error message)."""
+    subp = subprocess.Popen(f"sudo wg-quick {kw} {interface}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
+
+    _, std_err = subp.communicate()  # blocking
+    if subp.returncode == 0:
+        return True, ""
+
+    return False, std_err.decode()
+
+
 class WGInterface(QAction):
     done = pyqtSignal(bool, str, name="done")  # necessary to put outside of __init__
 
@@ -137,19 +148,10 @@ class WGInterfaceAll(QAction):
     def _toggle(self):
         kw = "up" if self.type_ else "down"
 
-        def _interface_open(interface):
-            subp = subprocess.Popen(f"sudo wg-quick {kw} {interface}", stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=True)
-
-            _, std_err = subp.communicate()  # blocking
-            if subp.returncode == 0:
-                return True, ""
-
-            return False, std_err.decode()
-
         upped_interface = 0
 
         for interface in self.get_iterfaces_to_workon():
-            success, err_msg = _interface_open(interface)
+            success, err_msg = wg_quick(kw, interface)
 
             if success:
                 logger.info(f"Interface: {interface}, sucessfully mounted")

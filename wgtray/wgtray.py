@@ -3,6 +3,7 @@ import argparse
 import logging
 import os
 import pathlib
+import random
 import signal
 import sys
 
@@ -13,10 +14,50 @@ from PyQt5.QtWidgets import QAction, QApplication, QMenu, QSystemTrayIcon
 
 
 from . import __description__, __version__
-from .actions.interface import WGInterface, WGInterfaceAll
+from .actions.interface import wg_quick, WGInterface, WGInterfaceAll
 
 
 RES_PATH = pathlib.Path(__file__).parent.resolve() / "res"
+
+
+def read_groups(config_menu):
+    """Yield (name, interfaces, pick_one_at_random) for each group (skip `settings`)."""
+    general_pick_one_at_random = False
+    if "settings" in config_menu:
+        general_pick_one_at_random = config_menu["settings"].get("pick_one_at_random", "false") == "true"
+
+    for section in config_menu.sections():
+        if section == "settings":
+            continue
+
+        if "pick_one_at_random" in config_menu[section]:
+            pick_one_at_random = config_menu[section].get("pick_one_at_random", "false") == "true"
+
+        else:
+            pick_one_at_random = general_pick_one_at_random
+
+        yield section, config_menu[section]["interfaces"].strip().split(), pick_one_at_random
+
+
+def up_all_groups(config_menu):
+    """Up all groups without the tray (same as "Up interfaces on all groups" in the menu). Return the exit code."""
+    failed = 0
+
+    for section, interfaces, pick_one_at_random in read_groups(config_menu):
+        if pick_one_at_random:
+            interfaces = random.choices(interfaces, k=1)
+
+        for interface in interfaces:
+            success, err_msg = wg_quick("up", interface)
+
+            if success:
+                print(f"[{section}] {interface}: up")
+
+            else:
+                failed += 1
+                print(f"[{section}] {interface}: error: {err_msg.strip()}", file=sys.stderr)
+
+    return 1 if failed else 0
 
 
 class WGTrayIcon(QSystemTrayIcon):
@@ -51,21 +92,7 @@ class WGMenu(QMenu):
         self.menus = []
 
         if self.config_menu:
-            general_pick_one_at_random = False
-            if "settings" in config:
-                settings = self.config_menu["settings"]
-                general_pick_one_at_random = settings.get("pick_one_at_random", "false") == "true"
-
-            for section in self.config_menu.sections():
-                if section == "settings":
-                    continue
-
-                if "pick_one_at_random" in self.config_menu[section]:
-                    pick_one_at_random = self.config_menu[section].get("pick_one_at_random", "false") == "true"
-
-                else:
-                    pick_one_at_random = general_pick_one_at_random
-
+            for section, interfaces, pick_one_at_random in read_groups(self.config_menu):
                 menu = self.addMenu(str(section))
                 self.menus.append(menu)
 
@@ -73,7 +100,7 @@ class WGMenu(QMenu):
                     continue
 
                 section_interfaces = []
-                for interface in self.config_menu[section]["interfaces"].strip().split():
+                for interface in interfaces:
                     action = WGInterface(interface, self, interface in itfs_up)
                     action.updateIcon()
                     menu.addAction(action)
@@ -270,6 +297,12 @@ def parse_args():
         default="~/.wireguard/wg_tray_groups.ini",
         type=str,
     )
+    parser.add_argument(
+        "-u",
+        "--up-all-groups",
+        help="Up all groups and exit, without starting the tray (same as 'Up interfaces on all groups' in the menu)",
+        action="store_true",
+    )
 
     args = parser.parse_args()
 
@@ -279,10 +312,13 @@ def parse_args():
 logging.basicConfig(level=logging.INFO)
 config = ConfigParser()
 
-app = QApplication(sys.argv)
-
 parser_args = parse_args()
 config.read(pathlib.Path(parser_args.config_groups).expanduser())
+
+if parser_args.up_all_groups:
+    sys.exit(up_all_groups(config))
+
+app = QApplication(sys.argv)
 
 WGTrayIcon(parser_args.config, config_menu=config)
 

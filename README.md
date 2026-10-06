@@ -9,7 +9,7 @@ wg-tray is a small python package. To install it globally, the recommended versi
 
 ## Usage
 ```bash
-usage: wg-tray [-h] [-v] [-c CONFIG] [-g CONFIG_GROUPS]
+usage: wg-tray [-h] [-v] [-c CONFIG] [-g CONFIG_GROUPS] [-u]
 
 A simple UI tool to handle WireGuard interfaces
 
@@ -23,6 +23,9 @@ options:
   -g CONFIG_GROUPS, --config-groups CONFIG_GROUPS
                         Path to the config (.ini file) to have groups of wireguard configs.
                         (default: ~/.wireguard/wg_tray_groups.ini)
+  -u, --up-all-groups   Up all groups and exit, without starting the tray
+                        (same as 'Up interfaces on all groups' in the menu)
+                        (default: False)
 ```
 The config file should simply list all wireguard interfaces, separated either by newlines or spaces (e.g. `wg0 wg1` or
 ```
