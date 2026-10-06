@@ -1,40 +1,175 @@
+[project]
+name = "wg-tray"
+dynamic = ["version"]
+description = "A simple graphical tool to manage wireguard interfaces from the system tray"
+readme = "README.md"
+license-files = ["LICENSE.txt"]
+authors = [{ name = "Elsa Weber", email = "elsa.weber@arcanite.ch" }]
+requires-python = ">=3.9"
+dependencies = [
+    "pyqt5",
+]
+
+[project.urls]
+Homepage = "https://wg-tray.arcanite.ch/"
+
+[dependency-groups]
+dev = [
+    "ruff",
+    "pre-commit",
+]
+
 [build-system]
-requires = ["setuptools>=40.8.0", "wheel"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling>=1.27"]
+build-backend = "hatchling.build"
 
-[tool.black]
-line-length = 150
+[tool.hatch.version]
+path = "wgtray/__init__.py"
 
-[tool.isort]
-# When imports are broken into multi-line, use the "Vertical Hanging Indent" layout.
-multi_line_output = 3
+[tool.hatch.build.targets.sdist]
+include = ["wgtray", "bin", "README.md", "LICENSE.txt"]
 
-# Always add a trailing comma to import lists (default: False).
-include_trailing_comma = true
+[tool.hatch.build.targets.wheel]
+packages = ["wgtray"]
 
-# Always put imports lists into vertical mode (0 = none allowed on first line)
-force_grid_wrap = 0
+[tool.hatch.build.targets.wheel.shared-scripts]
+"bin/wg-tray" = "wg-tray"
 
-# When multi-lining imports, use parentheses for line-continuation instead of default \.
-use_parentheses = true
+# Formating and Linting
+# ---------------------
+[tool.ruff]
+# Exclude a variety of commonly ignored directories.
+exclude = [
+  ".git",
+  ".mypy_cache",
+  ".ruff_cache",
+  ".venv",
+  ".vscode",
+  "__pypackages__",
+  "_build",
+  "build",
+  "dist",
+  "site-packages",
+  "venv",
+]
 
-# Max import line length.
-line_length = 150
+indent-width = 4
+line-length = 150 # NB: used for code and imports (imports longer than that -> parenthesis, vertical, no grid)
 
-# Regardless of what follows the imports, force 2 blank lines after the import list
-lines_after_imports = 2
+target-version = "py39"
 
-# Insert 2 blank lines between each section
-lines_between_sections = 2
+[tool.ruff.format]
+docstring-code-format = true  # format code examples in docstrings
+indent-style = "space"  # spaces, not tabs
+line-ending = "auto"  # detect line ending
+quote-style = "double"
+skip-magic-trailing-comma = false  # keep magic trailing commas
 
-# Alphabetical sort in sections (inside a line or in ())
-force_alphabetical_sort_within_sections = true
+[tool.ruff.lint]
+# Unused variables are ok when prefixed by `_`
+dummy-variable-rgx = "^(_+|(_+[a-zA-Z0-9_]*[a-zA-Z0-9]+?))$"
+# Everything is fixable (with `--fix`)
+fixable = ["ALL"]
+ignore = [
+  "D100",    # undocumented-public-module
+  "D101",    # undocumented-public-class
+  "D102",    # undocumented-public-method
+  "D103",    # undocumented-public-function
+  "D104",    # undocumented-public-package
+  "D105",    # undocumented-magic-method
+  "D106",    # undocumented-public-nested-class
+  "D107",    # undocumented-public-init
+  "COM812",  # missing-trailing-comma
+  "FBT001",  # Boolean-typed positional argument in function definition
+  "FBT002",  # Boolean default value in function definition
+  "FBT003",  # Boolean positional value in function call
+  "ISC001",  # flake8-implicit-str-concat Implicitly concatenated string literals on one line
+  "RET501",  # flake8-return `return None` is ok, even if it's the only value
+  "RET502",  # flake8-return `return None` is ok, even if NoneType is not expected
+  "RET503",  # flake8-return implicit-return for None value
+  "RET504",  # flake8-return assignement used before return
+  "RSE102",  # flake8-raise keep parenthesis for exceptions
+  "BLE001",  # flake8-blind-except: do not catch blind exception: `Exception`
+  "RUF012",  # mutable-class-default
+  "TRY002",  # raise-vanilla-class
+  "TRY003",  # raise-vanilla-args
+  "PERF401", # manual-list-comprehension
+  "PERF403", # manual-dict-comprehension
+  "N802",    # invalid-function-name (Qt API is camelCase)
+  "N803",    # invalid-argument-name (Qt API is camelCase)
+  "N806",    # non-lowercase-variable-in-function (Qt API is camelCase)
+  "N815",    # mixed-case-variable-in-class-scope (Qt API is camelCase)
+  "S311",    # suspicious-non-cryptographic-random-usage (only to pick a random interface)
+  "S602",    # subprocess-popen-with-shell-equals-true (we need `sudo wg-quick` anyway)
+  "S605",    # start-process-with-a-shell (same)
+  "S607",    # start-process-with-partial-path (same)
+]
+unfixable = []
+select = [
+  "A",    # flake8-builtins
+  "B",    # flake8-bugbear
+  "BLE",  # flake8-blind-except
+  "C4",   # flake8-comprehensions
+  "COM",  # flake8-commas
+  "D",    # pydocstyle
+  "DTZ",  # flake8-datetimez
+  "E",    # pycodestyle
+  "F",    # Pyflakes
+  "FBT",  # flake8-boolean-trap
+  "I",    # isort
+  "ICN",  # flake8-import-conventions
+  "ISC",  # flake8-implicit-str-concat
+  "N",    # pep8-naming
+  "PIE",  # flake8-pie
+  "PL",   # Pylint
+  "PYI",  # flake8-pyi
+  "Q",    # flake8-quotes
+  "RET",  # flake8-return
+  "RSE",  # flake8-raise
+  "S",    # flake8-bandit
+  "SLF",  # flake8-self
+  "T20",  # flake8-print
+  "UP",   # pyupgrade
+  "RUF",  # ruff
+  "SIM",  # code-simplification
+  "ARG",  # flake8-unused-arguments
+  "ERA",  # eradicate (commented-out code)
+  "PERF", # Perflint (performance issues)
+  "FLY",  # flynt (string formatting modernization)
+  "FURB", # refurb (idiomatic refactors)
+  "LOG",  # flake8-logging (logging best practices)
+  "TRY",  # tryceratops (exception handling style)
+]
 
-# Sort by lexicographical
-lexicographical = true
+[tool.ruff.lint.isort]
+case-sensitive = true
+from-first = true
+known-first-party = ["wgtray"]
+# Arcanite projects: STDLIB == THIRDPARTY
+# (standard-library is not in section-order -> goes in default-section, aka third-party)
+default-section = "third-party"
+section-order = ["future", "first-party", "local-folder", "third-party"]
+# Arcanite projects: FIRSTPARTY + LOCALFOLDER in the same section
+no-lines-before = ["local-folder"]
+# Always 2 blank lines after the imports
+lines-after-imports = 2
+lines-between-types = 1
 
-# Put all from before import
-from_first = true
+[tool.ruff.lint.flake8-quotes]
+avoid-escape = true
+docstring-quotes = "double"
+inline-quotes = "double"
+multiline-quotes = "double"
 
-ensure_newline_before_comments = true
+[tool.ruff.lint.per-file-ignores]
+"*/__init__.py" = ["F401", "F403"]
+"wgtray/wgtray.py" = ["T201"]  # print is ok for `--up-all-groups` output
 
+[tool.ruff.lint.pydocstyle]
+# Google-style docstrings
+convention = "google"
+
+[tool.ruff.lint.pylint]
+max-args = 10
+max-branches = 20
+allow-magic-value-types = ["str", "int"]
